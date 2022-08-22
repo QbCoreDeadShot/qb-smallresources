@@ -6,8 +6,43 @@ local ParachuteEquiped = false
 local currentVest = nil
 local currentVestTexture = nil
 local healing = false
-
+local IsAnimated = false
+Streaming = {}
 -- Functions
+function Streaming.RequestAnimDict(animDict, cb)
+	if not HasAnimDictLoaded(animDict) then
+		RequestAnimDict(animDict)
+
+		while not HasAnimDictLoaded(animDict) do
+			Citizen.Wait(1)
+		end
+	end
+
+	if cb ~= nil then
+		cb()
+	end
+end
+
+function SpawnObject(model, coords, cb)
+	local model = (type(model) == 'number' and model or GetHashKey(model))
+
+	Citizen.CreateThread(function()
+		Streaming.RequestModel(model)
+
+		local obj = CreateObject(model, coords.x, coords.y, coords.z, true, false, true)
+
+		if cb ~= nil then
+			cb(obj)
+		end
+	end)
+end
+
+function loadAnimDict(dict)
+    while (not HasAnimDictLoaded(dict)) do
+        RequestAnimDict(dict)
+        Wait(5)
+    end
+end
 
 local function loadAnimDict(dict)
     if HasAnimDictLoaded(dict) then return end
@@ -144,33 +179,81 @@ local function CokeBaggyEffect()
 end
 
 -- Events
+-- Modified by DeadShot --
 
-RegisterNetEvent('consumables:client:Eat', function(itemName)
-    TriggerEvent('animations:client:EmoteCommandStart', {"eat"})
-    QBCore.Functions.Progressbar("eat_something", "Eating..", 5000, false, true, {
+RegisterNetEvent('ltyneeds:onEat')
+AddEventHandler('ltyneeds:onEat', function(prop_name, animDict, anim, boneID, itemName)
+    if not IsAnimated then
+        prop_name = prop_name or 'prop_amb_handbag_01'
+        IsAnimated = true
+        Citizen.CreateThread(function()
+            local playerPed = PlayerPedId()
+            local x,y,z = table.unpack(GetEntityCoords(playerPed))
+            local prop = CreateObject(GetHashKey(prop_name), x, y, z, true, true, true)
+            local boneIndex = GetPedBoneIndex(playerPed, boneID)
+            AttachEntityToEntity(prop, playerPed, boneIndex, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+
+            Streaming.RequestAnimDict(animDict, function()
+                TaskPlayAnim(playerPed, animDict, anim, 8.0, -8, -1, 49, 0, 0, 0, 0)
+                TriggerEvent('ltyneeds:eatingprogressbar')
+                TriggerServerEvent("QBCore:Server:SetMetaData", "hunger", QBCore.Functions.GetPlayerData().metadata["hunger"] + ConsumeablesEat[itemName])
+                TriggerServerEvent('hud:server:RelieveStress', math.random(2, 4))
+                Citizen.Wait(7000)
+                IsAnimated = false
+                ClearPedSecondaryTask(playerPed)
+                DeleteObject(prop)
+            end)
+        end)
+    end
+end)
+
+RegisterNetEvent('ltyneeds:eatingprogressbar')
+AddEventHandler('ltyneeds:eatingprogressbar', function()
+    QBCore.Functions.Progressbar("eat_something", "Comiendo..", 7000, false, true, {
         disableMovement = false,
         disableCarMovement = false,
 		disableMouse = false,
 		disableCombat = true,
     }, {}, {}, {}, function() -- Done
         TriggerEvent("inventory:client:ItemBox", QBCore.Shared.Items[itemName], "remove")
-        TriggerEvent('animations:client:EmoteCommandStart', {"c"})
-        TriggerServerEvent("consumables:server:addHunger", QBCore.Functions.GetPlayerData().metadata["hunger"] + ConsumablesEat[itemName])
-        TriggerServerEvent('hud:server:RelieveStress', math.random(2, 4))
     end)
 end)
 
-RegisterNetEvent('consumables:client:Drink', function(itemName)
-    TriggerEvent('animations:client:EmoteCommandStart', {"drink"})
-    QBCore.Functions.Progressbar("drink_something", "Drinking..", 5000, false, true, {
+RegisterNetEvent('ltyneeds:onDrink')
+AddEventHandler('ltyneeds:onDrink', function(prop_name, animDict, anim, boneID, itemName)
+    if not IsAnimated then
+        prop_name = prop_name or 'prop_amb_handbag_01'
+        IsAnimated = true
+        Citizen.CreateThread(function()
+            local playerPed = PlayerPedId()
+            local x,y,z = table.unpack(GetEntityCoords(playerPed))
+            local prop = CreateObject(GetHashKey(prop_name), x, y, z, true, true, true)
+            local boneIndex = GetPedBoneIndex(playerPed, boneID)
+            AttachEntityToEntity(prop, playerPed, boneIndex, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+
+            Streaming.RequestAnimDict(animDict, function()
+                TaskPlayAnim(playerPed, animDict, anim, 8.0, -8, -1, 49, 0, 0, 0, 0)
+                TriggerEvent('ltyneeds:eatingprogressbar')
+                TriggerServerEvent("QBCore:Server:SetMetaData", "thirst", QBCore.Functions.GetPlayerData().metadata["thirst"] + ConsumeablesEat[itemName])
+                TriggerServerEvent('hud:server:RelieveStress', math.random(2, 4))
+                Citizen.Wait(10000)
+                IsAnimated = false
+                ClearPedSecondaryTask(playerPed)
+                DeleteObject(prop)
+            end)
+        end)
+    end
+end)
+
+RegisterNetEvent('ltyneeds:drinkingprogressbar')
+AddEventHandler('ltyneeds:drinkingprogressbar', function()
+    QBCore.Functions.Progressbar("drink_something", "Tomando..", 10000, false, true, {
         disableMovement = false,
         disableCarMovement = false,
 		disableMouse = false,
 		disableCombat = true,
     }, {}, {}, {}, function() -- Done
         TriggerEvent("inventory:client:ItemBox", QBCore.Shared.Items[itemName], "remove")
-        TriggerEvent('animations:client:EmoteCommandStart', {"c"})
-        TriggerServerEvent("consumables:server:addThirst", QBCore.Functions.GetPlayerData().metadata["thirst"] + ConsumablesDrink[itemName])
     end)
 end)
 

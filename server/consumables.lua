@@ -17,9 +17,27 @@ end)
 ----------- / Eat
 
 QBCore.Functions.CreateUseableItem("sandwich", function(source, item)
-    local Player = QBCore.Functions.GetPlayer(source)
-	if not Player.Functions.RemoveItem(item.name, 1, item.slot) then return end
-    TriggerClientEvent("consumables:client:Eat", source, item.name)
+    local src = source
+    local Player = QBCore.Functions.GetPlayer(src)
+	if Player.Functions.RemoveItem(item.name, 1, item.slot) then
+        TriggerClientEvent('ltyneeds:onEat', src,  "prop_sandwich_01", "amb@code_human_wander_eating_donut@male@idle_a", "idle_c" , 28422, item.name)
+    end
+end)
+
+QBCore.Functions.CreateUseableItem("empanadilla", function(source, item)
+    local src = source
+    local Player = QBCore.Functions.GetPlayer(src)
+	if Player.Functions.RemoveItem(item.name, 1, item.slot) then
+        TriggerClientEvent('ltyneeds:onEat', src,  "ltyempanadilla", "amb@code_human_wander_eating_donut@male@idle_a", "idle_c" , 28422, item.name)
+    end
+end)
+
+QBCore.Functions.CreateUseableItem("pizza", function(source, item)
+    local src = source
+    local Player = QBCore.Functions.GetPlayer(src)
+	if Player.Functions.RemoveItem(item.name, 1, item.slot) then
+        TriggerClientEvent('ltyneeds:onEat', src,  "mah_pizza", "amb@code_human_wander_eating_donut@male@idle_a", "idle_c" , 28422, item.name)
+    end
 end)
 
 QBCore.Functions.CreateUseableItem("twerks_candy", function(source, item)
